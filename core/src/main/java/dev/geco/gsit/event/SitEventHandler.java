@@ -31,6 +31,8 @@ public class SitEventHandler implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void playerInteractEvent(PlayerInteractEvent event) {
+        if(cn.jiujiu.gsit.carry.CarryModule.blockInteraction(event.getPlayer())
+                || cn.jiujiu.gsit.ActionMenu.blockSeatSwitch(gSitMain,event.getPlayer())) return;
         Action action = event.getAction();
         if(event.getHand() != EquipmentSlot.HAND || action != Action.RIGHT_CLICK_BLOCK) return;
 

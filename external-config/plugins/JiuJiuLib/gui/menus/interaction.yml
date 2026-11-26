@@ -1,0 +1,68 @@
+# 个人互动设置：普通27格箱子菜单，不依赖材质包。
+# slots为0～26的槽位；按钮名称、说明、材质、权限和点击命令均可修改。
+# 开关仅改变操作玩家本人的GSit互动偏好，不修改服务器全局功能。
+enabled: true
+rows: 3
+title: '<dark_aqua>互动设置'
+permission: ''
+require-resource-pack: false
+# 点击冷却0～3000毫秒；保持默认防止快速重复操作。
+click-cooldown-ms: 250
+border:
+  material: AIR
+  name: ' '
+buttons:
+  enable:
+    enabled: true
+    slots: [11]
+    material: LIME_DYE
+    permission: ''
+    name: '<green>开启互动'
+    lore:
+      - '<gray>允许骑乘、抱起和投掷互动。'
+      - '<gray>点击开启，仅影响自己。'
+    action:
+      type: player_command
+      value: gsit:jiujiuqi on
+  status:
+    enabled: true
+    slots: [13]
+    material: COMPARATOR
+    permission: ''
+    name: '<aqua>查看状态'
+    lore:
+      - '<gray>在聊天栏查看当前互动开关。'
+    action:
+      type: player_command
+      value: gsit:jiujiuqi status
+  disable:
+    enabled: true
+    slots: [15]
+    material: RED_DYE
+    permission: ''
+    name: '<red>关闭互动'
+    lore:
+      - '<gray>拒绝骑乘、抱起和投掷互动。'
+      - '<gray>同时结束自己当前的骑乘或抱起。'
+    action:
+      type: player_command
+      value: gsit:jiujiuqi off
+  back:
+    enabled: true
+    slots: [18]
+    material: ARROW
+    permission: ''
+    name: '<yellow>返回趣味菜单'
+    lore: []
+    action:
+      type: player_command
+      value: jiujiulib:jjfun
+  close:
+    enabled: true
+    slots: [26]
+    material: BARRIER
+    permission: ''
+    name: '<gray>关闭菜单'
+    lore: []
+    action:
+      type: close

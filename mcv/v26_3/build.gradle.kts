@@ -5,7 +5,7 @@ plugins {
 
 dependencies {
     compileOnly(project(":core"))
-    paperweight.paperDevBundle("26.3.build.+")
+    paperweight.paperDevBundle(providers.gradleProperty("jiujiuPaper26_3").get())
 }
 
 paperweight.reobfArtifactConfiguration = io.papermc.paperweight.userdev.ReobfArtifactConfiguration.MOJANG_PRODUCTION

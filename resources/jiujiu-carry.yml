@@ -1,0 +1,121 @@
+# GSit 合并抱起模块；主配置、数据库和原动作设置继续使用 GSit 原文件。
+# 颜色使用 & 色码；修改后游戏内 /carry reload，控制台 carry reload。
+enabled: true
+menu:
+  # /sq、/jiujiuqi 等无参数命令打开个人互动菜单；关闭后仍可用 on/off。
+  enabled: true
+  # JiuJiuLib/gui/menus 下的菜单文件名，不含.yml；1～48位字母、数字、下划线或短横线。
+  id: interaction
+pickup:
+  # 生物抱起开关；主手与副手都必须为空。
+  enabled: true
+  # true要求蹲下右键；false允许不蹲下抱生物，玩家抱起仍须蹲下。
+  require-sneaking: true
+  # 最大交互距离1～5格；同时检查视线。
+  range: 3.0
+  # 成功抱起后的冷却，100～60000毫秒。
+  cooldown-ms: 1000
+  # 允许生物的最大实际宽/高，分别0.2～4与0.2～5格。
+  max-width: 1.4
+  max-height: 2.9
+  # 只允许抱自己的已驯服宠物；牵绳及已有骑乘关系的生物不能抱起。
+  only-own-tamed-pets: true
+  # 世界名大小写须与服务端一致；空列表不额外限制。
+  disabled-worlds: []
+  # Bukkit生物类型英文名；黑名单优先，错误名称会拒绝加载。
+  denied-types: [WARDEN, WITHER, ENDER_DRAGON, ELDER_GUARDIAN, GIANT, RAVAGER, GHAST, HAPPY_GHAST, IRON_GOLEM]
+  # 空列表允许符合其他限制的生物；非空时仅允许列表内类型。
+  allowed-types: []
+players:
+  # 玩家抱起与投掷开关；普通骑人/叠骑只由 GSit 主配置控制。
+  enabled: true
+  carry: true
+  throw: true
+  # 玩家抱起距离1～5格，冷却100～60000毫秒。
+  range: 3.0
+  cooldown-ms: 1000
+  # 玩家下乘后原位异步同步，减少卡视角；不会重新传送已开始回岛的玩家。
+  resync-after-dismount: true
+  permissions:
+    # true时额外核对以下节点；是否允许被骑/被抱起由各自的GSit个人开关决定。
+    enabled: false
+    menu: jiujiuqi.use
+    carry: jiujiuqi.carry
+    receive: jiujiuqi.receive
+    throw: jiujiuqi.throw
+controls:
+  # 抱起期间仅给本人发送不可见客户端交互目标，让空手右键空气也能抛出；不生成世界实体或物品。
+  # 默认开启，关闭后仅保留原右键实体/方块输入；修改后 /carry reload，当前携带结束后生效。
+  air-right-click: true
+  # 双击Shift放下的间隔150～1500毫秒；乘客单按Shift可自行下来。
+  double-shift-ms: 450
+  # 抱起后0～2000毫秒内不响应抛出/放下，避免同次输入误触。
+  hold-guard-ms: 350
+  # 连续右键去重间隔50～1000毫秒，同时至少间隔6个玩家tick。
+  right-click-debounce-ms: 350
+  # 放下后350～10000毫秒内不再挂载，届满自动恢复，无需再次按Shift。
+  remount-guard-ms: 1000
+throw:
+  # 仅投掷主动抱起的对象，不投掷GSit普通叠骑链。
+  enabled: true
+  # 水平系数0.1～3，额外向上速度0～1.5；保留碰撞与落地伤害。
+  horizontal-speed: 1.25
+  upward-speed: 0.45
+safety:
+  # 携带有效生物期间阻止非主动下乘；不阻止主动放下、抛出、传送拆乘、死亡与清理。false仅记录意外下乘来源。
+  prevent-mob-self-dismount: true
+  # 使用普通命令或菜单前自动下乘，避免核心在乘客状态提前拒绝回岛；互动控制命令除外。
+  detach-before-commands: true
+  detach-before-menus: true
+  # 阻止被抱生物攻击、施法、发射弹射物；爆炸与生物自行传送固定阻止。
+  block-carried-attacks: true
+  release-on-carrier-damage: true
+  # 最长携带5～3600秒，到期放下。
+  max-hold-seconds: 300
+performance:
+  # 同时抱起人数上限1～512，每人只抱一个对象。
+  max-carriers: 128
+  # 仅检查正在抱起者，周期5～200tick；不全服扫描生物。
+  check-period-ticks: 20
+permissions:
+  # 留空不额外检查；权限可自定义。
+  use: jiujiucarry.use
+  throw: jiujiucarry.throw
+  admin: jiujiucarry.admin
+  # true时额外要求 jiujiucarry.entity.类型小写，如 jiujiucarry.entity.cow。
+  per-entity: false
+messages:
+  receive-ride-on: '&b允许别人骑我：&a开启'
+  receive-ride-off: '&b允许别人骑我：&7关闭'
+  receive-carry-on: '&b允许别人抱起我：&a开启'
+  receive-carry-off: '&b允许别人抱起我：&7关闭'
+  # 留空关闭对应提示；成功抱起仅一条简短提示，不额外发送长操作说明。
+  prefix: ''
+  picked-up: '&b抱起来了。'
+  player-carrying: '&b抱起来了。'
+  player-carried: '&b被抱起了，Shift 下来。'
+  put-down: '&a已放下。'
+  thrown: '&b已抛出。'
+  auto-released: ''
+  player-on: '&a互动已开启。'
+  player-off: '&7互动已关闭。'
+  player-refused: '&e互动未开启。'
+  player-busy: '&e正在骑乘，请先下来。'
+  mount-protected: ''
+  ride-rearm: ''
+  sync-failed: '&e已下乘，本次未抛出。'
+  too-large: '&e不能抱起这个生物。'
+  type-denied: '&e配置禁止抱起这种生物。'
+  not-your-pet: '&e不能抱走别人的宠物。'
+  disabled-world: '&e这里不能抱起。'
+  no-permission: '&c没有权限。'
+  cooldown: ''
+  capacity: '&e稍后再试。'
+  storage-wait: '&e稍后再试。'
+  menu-unavailable: '&e菜单暂不可用，可用 /sq on 或 /sq off。'
+  throw-disabled: '&e无法抛出，请双击 Shift 放下。'
+  release-blocked: '&e暂时无法放下。'
+  reloaded: '&a配置已重载。'
+  reload-failed: '&c配置有误，保留旧配置。'
+  status: '&b互动：{state} &7| 抱起：{holding}'
+  help: '&b蹲下空手右键抱起 &7| &b右键抛出 &7| &b双 Shift 放下 &7| &b/dz 管理被骑和被抱起'

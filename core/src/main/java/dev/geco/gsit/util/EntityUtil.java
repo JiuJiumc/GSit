@@ -16,6 +16,9 @@ import java.util.UUID;
 
 public interface EntityUtil {
 
+    /** Modern adapters provide an invisible, client-only right-click target while carrying. */
+    default cn.jiujiu.gsit.carry.CarryInput createCarryInput(@NotNull Player player) { return null; }
+
     default void setEntityLocation(@NotNull Entity entity, @NotNull Location location) { setEntityLocation(entity, location, false); }
 
     void setEntityLocation(@NotNull Entity entity, @NotNull Location location, boolean sync);

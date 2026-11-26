@@ -176,6 +176,8 @@ public class GSitMain extends JavaPlugin {
         setupCommands();
         setupEvents();
         setupBStatsMetric();
+        cn.jiujiu.gsit.ActionMenu.enable(this);
+        cn.jiujiu.gsit.carry.CarryModule.enable(this);
 
         Bukkit.getPluginManager().callEvent(new GSitLoadedEvent(this));
 
@@ -186,6 +188,8 @@ public class GSitMain extends JavaPlugin {
     }
 
     public void onDisable() {
+        if(updateService != null) updateService.close();
+        if(toggleService != null) toggleService.close();
         unload();
         if(bStatsMetric != null) bStatsMetric.shutdown();
         messageService.sendMessage(Bukkit.getConsoleSender(), "Plugin.plugin-disabled");
@@ -198,6 +202,7 @@ public class GSitMain extends JavaPlugin {
     }
 
     public void reload(CommandSender sender) {
+        if(cn.jiujiu.gsit.carry.CarryModule.blockUnsafeReload(this, sender)) return;
         GSitReloadEvent reloadEvent = new GSitReloadEvent(this);
         Bukkit.getPluginManager().callEvent(reloadEvent);
         if(reloadEvent.isCancelled()) return;
@@ -210,10 +215,14 @@ public class GSitMain extends JavaPlugin {
         printPluginLinks(sender);
         updateService.checkForUpdates();
 
+        cn.jiujiu.gsit.ActionMenu.enable(this);
+        cn.jiujiu.gsit.carry.CarryModule.enable(this);
         Bukkit.getPluginManager().callEvent(new GSitLoadedEvent(this));
     }
 
     private void unload() {
+        cn.jiujiu.gsit.carry.CarryModule.disable();
+        cn.jiujiu.gsit.ActionMenu.disable();
         dataService.close();
         sitService.removeAllSeats();
         playerSitService.removeAllPlayerSitStacks();

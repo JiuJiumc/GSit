@@ -1,0 +1,16 @@
+# 仅控制更新查询网络行为；总开关沿用config.yml的Options.check-for-update。
+# 修改本文件后完整重启。更新失败不会停用动作、互动或菜单。
+# 连接与单次读取超时，500～15000毫秒。
+connect-timeout-ms: 3000
+read-timeout-ms: 3000
+# 整次请求时限，1000～30000毫秒；最终还受正在进行的连接/读取超时约束。
+total-timeout-ms: 8000
+# 响应体上限，1024～2097152字节；默认1 MiB，超出则结束检查。
+max-response-bytes: 1048576
+# 成功或失败后多久才允许再次查询，60～604800秒；不自动重试或切换查询源。
+success-cache-seconds: 86400
+failure-cache-seconds: 86400
+# true时每次实际查询失败只提示一行，false关闭失败提示；不打印异常堆栈。
+log-failure: true
+# 支持{source}来源、{reason}简短原因；空文本关闭提示，不得换行或超过256字符。
+failure-message: '更新检查暂不可用（{source} {reason}），不影响功能。'

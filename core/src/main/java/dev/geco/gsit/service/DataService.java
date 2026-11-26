@@ -67,11 +67,15 @@ public class DataService {
     }
 
     private boolean reconnect() {
+        close();
         try {
             if(type.equals("sqlite")) Class.forName("org.sqlite.JDBC");
             connection = getConnection(false);
             if(connection != null) {
-                if(!type.equals("sqlite")) connection = getConnection(true);
+                if(!type.equals("sqlite")) {
+                    close();
+                    connection = getConnection(true);
+                }
                 if(connection != null) {
                     retries = 0;
                     lastValidCheck = System.nanoTime();

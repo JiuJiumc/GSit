@@ -1,5 +1,7 @@
 # [GSit](https://github.com/gecolay/GSit) - [GPlugin](https://discord.gg/Cy2P4AU)
 
+This is the `jiujiu` branch based on upstream 3.8.0. See [JiuJiu changes, build instructions and validation](JIUJIU.md).
+
 ## Overview
 
 This repository contains the GSit project!

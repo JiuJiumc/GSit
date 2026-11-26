@@ -1,0 +1,148 @@
+# JiuJiu 内置动作菜单；修改后重启生效，不依赖 CommandPanels。
+# 支持 & 颜色与 &#RRGGBB 十六进制颜色；不要删除引号。
+enabled: true
+# 是否允许坐着时右键换座：默认 false 防止连续右键快速移动；true 恢复原版换座行为。
+# 已有配置未填写本项时，也默认禁止换座。必须先起身才能再次右键坐下。
+allow-seat-switch: false
+# 菜单标题与行数；行数范围 1~6，按钮槽位为 0~行数×9-1。
+title: '&#72C7FFJ&#81CDFFi&#8FD4FFu&#9EDAFFJ&#ADE1FFi&#BCE7FFu&#CAEEFF动&#D9F4FF作'
+rows: 5
+background: WHITE_STAINED_GLASS_PANE
+# 菜单权限不替代 GSit 各动作权限；留空代表不检查此项权限。
+permission: gsit.menu
+auto-permission: gsit.menu.auto
+# 两个被动互动开关额外权限；留空时只要求上方菜单权限。
+interaction-permission: ''
+states:
+  'on': '&a已开启'
+  'off': '&7已关闭'
+  loading: '&e读取中'
+# 按钮点击冷却，单位毫秒，范围 0~60000。
+cooldown-ms: 400
+messages:
+  storage-wait: '&#A8DCFF设置暂未保存，请稍后再试。'
+  receive-ride-on: '&#87D0FF现在允许别人骑你。'
+  receive-ride-off: '&#87D0FF已禁止别人骑你，抱起设置不变。'
+  receive-carry-on: '&#87D0FF现在允许别人抱起你。'
+  receive-carry-off: '&#87D0FF已禁止别人抱起你，骑乘设置不变。'
+  disabled: '&#A8DCFF动作菜单暂未开放。'
+  denied: '&#A8DCFF你还没有使用这个功能的权限。'
+  auto-off: '&#87D0FF已关闭右键方块坐下和自动爬行，手动动作仍然能用。'
+  auto-on: '&#87D0FF已开启右键方块坐下和自动爬行，触发方式以 GSit 配置为准。'
+# 每个按钮可单独关闭；槽位不可重复。材质填写 Bukkit 材质名称。
+# name 为名称，lore 为说明。动作权限由 GSit 自身检查，不授予管理权限。
+buttons:
+  # 两个开关分别保存，重登/重启后保留；{state}显示自己的当前设置。
+  receive-ride:
+    enabled: true
+    slot: 38
+    material: SADDLE
+    on-material: LIME_DYE
+    off-material: GRAY_DYE
+    name: '&#72C7FF允许别人骑我 &8| {state}'
+    lore:
+      - ''
+      - '&#A8DCFF决定其他玩家能否骑在你身上。'
+      - '&#A8DCFF不影响你骑别人，也不影响被抱起。'
+      - '&#C8EDFF点击切换'
+  receive-carry:
+    enabled: true
+    slot: 42
+    material: LEAD
+    on-material: LIME_DYE
+    off-material: GRAY_DYE
+    name: '&#72C7FF允许别人抱起我 &8| {state}'
+    lore:
+      - ''
+      - '&#A8DCFF决定其他玩家能否蹲下右键抱起你。'
+      - '&#A8DCFF不影响你抱别人，也不影响被骑。'
+      - '&#C8EDFF点击切换'
+  sit:
+    enabled: true
+    slot: 11
+    material: CHERRY_STAIRS
+    name: '&#72C7FF坐&#D9F4FF下'
+    lore:
+      - ''
+      - '&#A8DCFF坐下来歇一会。'
+      - '&#C8EDFF点击使用'
+
+  lay:
+    enabled: true
+    slot: 13
+    material: LIGHT_BLUE_BED
+    name: '&#72C7FF躺&#D9F4FF下'
+    lore:
+      - ''
+      - '&#A8DCFF躺着看看风景。'
+      - '&#C8EDFF点击使用'
+
+  belly:
+    enabled: true
+    slot: 15
+    material: LIGHT_BLUE_CARPET
+    name: '&#72C7FF原&#94D6FF地&#B7E5FF趴&#D9F4FF下'
+    lore:
+      - ''
+      - '&#A8DCFF趴着不动，摆个姿势。'
+      - '&#C8EDFF点击使用'
+
+  crawl:
+    enabled: true
+    slot: 20
+    material: FEATHER
+    name: '&#72C7FF自&#94D6FF由&#B7E5FF爬&#D9F4FF行'
+    lore:
+      - ''
+      - '&#A8DCFF趴着也能移动。'
+      - '&#C8EDFF点击使用'
+
+  spin:
+    enabled: true
+    slot: 22
+    material: NAUTILUS_SHELL
+    name: '&#72C7FF转&#D9F4FF圈'
+    lore:
+      - ''
+      - '&#A8DCFF原地转个圈。'
+      - '&#C8EDFF点击使用'
+
+  legsup:
+    enabled: true
+    slot: 24
+    material: RABBIT_FOOT
+    name: '&#72C7FF仰&#94D6FF躺&#B7E5FF抬&#D9F4FF腿'
+    lore:
+      - ''
+      - '&#A8DCFF躺下来，把腿抬起来。'
+      - '&#C8EDFF点击使用'
+
+  auto-off:
+    enabled: true
+    slot: 30
+    material: LIGHT_BLUE_CONCRETE
+    name: '&#72C7FF关&#87D0FF闭&#9BD9FF自&#B0E2FF动&#C4EBFF动&#D9F4FF作'
+    lore:
+      - ''
+      - '&#A8DCFF不再误触右键坐下和自动爬行。'
+      - '&#C8EDFF点击使用'
+
+  auto-on:
+    enabled: true
+    slot: 32
+    material: SOUL_TORCH
+    name: '&#72C7FF开&#87D0FF启&#9BD9FF自&#B0E2FF动&#C4EBFF动&#D9F4FF作'
+    lore:
+      - ''
+      - '&#A8DCFF恢复右键坐下和自动爬行。'
+      - '&#C8EDFF点击使用'
+
+  close:
+    enabled: true
+    slot: 40
+    material: LIGHT_BLUE_DYE
+    name: '&#72C7FF关&#94D6FF闭&#B7E5FF菜&#D9F4FF单'
+    lore:
+      - ''
+      - '&#A8DCFF收起动作菜单。'
+      - '&#C8EDFF点击使用'

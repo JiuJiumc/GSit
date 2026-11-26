@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 public class TaskService {
 
     private final GSitMain gSitMain;
-    private final HashMap<UUID, Object> tasks = new HashMap<>();
+    private final ConcurrentHashMap<UUID, Object> tasks = new ConcurrentHashMap<>();
 
     public TaskService(GSitMain gSitMain) {
         this.gSitMain = gSitMain;
@@ -69,6 +69,7 @@ public class TaskService {
     public void runDelayed(@NotNull Runnable runnable, boolean sync, @Nullable Location location, long ticks) { runDelayed(runnable, sync, null, location, ticks); }
 
     private void runDelayed(@NotNull Runnable runnable, boolean sync, @Nullable Entity entity, @Nullable Location location, long ticks) {
+        ticks = Math.max(1L, ticks);
         if(!gSitMain.isEnabled()) return;
         if(gSitMain.supportsTaskFeature()) {
             if(entity != null) entity.getScheduler().runDelayed(gSitMain, scheduledTask -> runnable.run(), null, ticks);
@@ -94,6 +95,8 @@ public class TaskService {
     public @Nullable UUID runAtFixedRate(@NotNull Runnable runnable, boolean sync, @Nullable Location location, long delayTicks, long ticks) { return runAtFixedRate(runnable, sync, null, location, delayTicks, ticks); }
 
     private @Nullable UUID runAtFixedRate(@NotNull Runnable runnable, boolean sync, @Nullable Entity entity, @Nullable Location location, long delayTicks, long ticks) {
+        delayTicks = Math.max(1L, delayTicks);
+        ticks = Math.max(1L, ticks);
         if(!gSitMain.isEnabled()) return null;
         UUID taskId = UUID.randomUUID();
         if(gSitMain.supportsTaskFeature()) {
@@ -116,11 +119,12 @@ public class TaskService {
     }
 
     public void cancel(@Nullable UUID taskId) {
-        if(!tasks.containsKey(taskId)) return;
-        Object task = tasks.get(taskId);
+        if(taskId == null) return;
+        Object task = tasks.remove(taskId);
+        if(task == null) return;
         if(task instanceof BukkitRunnable) ((BukkitRunnable) task).cancel();
         else ((ScheduledTask) task).cancel();
-        tasks.remove(taskId);
+
     }
 
 }

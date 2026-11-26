@@ -7,9 +7,17 @@ main: ${main}
 api-version: 1.16
 folia-supported: true
 source: ${source}
-softdepend: [GriefPrevention, PlaceholderAPI, PlotSquared, WorldGuard]
+softdepend: [GriefPrevention, PlaceholderAPI, PlotSquared, WorldGuard, JiuJiuLib]
 
 commands:
+  dongzuo:
+    description: 啾啾动作菜单
+    usage: /dongzuo
+    aliases: [dz, actions]
+  jiujiuqi:
+    description: 抱起与互动
+    usage: /carry [menu|help|on|off|toggle|ride|pickup|down|drop|status|reload]
+    aliases: [sq, hr, ride, headride, jiujiucarry, carry, baobao]
   gsit:
     usage: /<command> [toggle|playertoggle]
     aliases: [sit]
@@ -51,6 +59,22 @@ commands:
     permission: GSit.Reload
 
 permissions:
+  gsit.menu:
+    default: true
+  jiujiuqi.use:
+    default: true
+  jiujiuqi.carry:
+    default: true
+  jiujiuqi.receive:
+    default: true
+  jiujiuqi.throw:
+    default: true
+  jiujiucarry.use:
+    default: true
+  jiujiucarry.throw:
+    default: true
+  jiujiucarry.admin:
+    default: op
   GSit.*:
     default: op
     description: GSit | Permissions

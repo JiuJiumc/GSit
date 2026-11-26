@@ -1,192 +1,141 @@
 package dev.geco.gsit.service;
 
 import dev.geco.gsit.GSitMain;
-import dev.geco.gsit.service.message.PaperMessageService;
-import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import dev.geco.gsit.service.message.PaperMessageService;
+import java.net.SocketTimeoutException;
+import java.util.*;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.function.LongSupplier;
+import java.util.regex.Pattern;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.IllegalPluginAccessException;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLConnection;
-import java.time.LocalDate;
-import java.util.Scanner;
-import java.util.function.Consumer;
-import java.util.logging.Level;
+/** Maintained replacement for GSit's update checker. Network work never owns player state. */
+public class UpdateService implements AutoCloseable {
+    private static final Pattern VERSION=Pattern.compile("[vV]?([0-9]{1,9}(?:\\.[0-9]{1,9}){0,5})(?:[-+][a-zA-Z0-9._+-]{1,48})?");
+    private static final int MAX_WAITERS=256;
+    private final GSitMain plugin;
+    private final UpdateOptions options;
+    private final UpdateHttp.Fetcher fetcher;
+    private final LongSupplier clock;
+    private final String source, current, website;
+    private final Object state=new Object();
+    // All fields below are guarded by state; callbacks only receive immutable snapshots.
+    private final Set<UUID> waiters=new HashSet<>();
+    private boolean closed, checking, broadcast, attempted;
+    private long nextCheck;
+    private Result cached;
+    private record Result(String version, boolean newer) {}
 
-public class UpdateService {
-
-    private final String GITHUB_REMOTE_URL = "https://api.github.com/repos/gecolay/gsit/releases/latest";
-    private final String MODRINTH_REMOTE_URL = "https://api.modrinth.com/v2/project/gsit/version";
-    private final String SPIGOT_REMOTE_URL = "https://api.spigotmc.org/legacy/update.php?resource=62325";
-    private final String PAPER_REMOTE_URL = "https://hangar.papermc.io/api/v1/projects/gecolay/gsit/latest?channel=release";
-    private final GSitMain gSitMain;
-    private LocalDate lastCheckDate = null;
-    private String latestVersion = null;
-    private boolean isLatestVersion = true;
-
-    public UpdateService(GSitMain gSitMain) {
-        this.gSitMain = gSitMain;
+    public UpdateService(GSitMain plugin) {
+        this(plugin,UpdateOptions.load(plugin),new UpdateHttp()::fetch,System::nanoTime);
     }
-
-    public void checkForUpdates() {
-        if(!gSitMain.getConfigService().CHECK_FOR_UPDATE) return;
-        checkVersion(() -> {
-            if(isLatestVersion) return;
-            for(Player player : Bukkit.getOnlinePlayers()) {
-                if(!gSitMain.getPermissionService().hasPermission(player, "Update")) continue;
-                sendUpdateMessage(player);
-            }
-            sendUpdateMessage(Bukkit.getConsoleSender());
-        });
+    UpdateService(GSitMain plugin,UpdateOptions options,UpdateHttp.Fetcher fetcher,LongSupplier clock) {
+        this.plugin=plugin; this.options=options; this.fetcher=fetcher; this.clock=clock;
+        current=plugin.getDescription().getVersion();
+        website=Objects.requireNonNullElse(plugin.getDescription().getWebsite(),"https://github.com/Gecolay/GSit");
+        source=UpdateOptions.source(plugin);
     }
-
+    private boolean alive() { synchronized(state) { return !closed && plugin.isEnabled(); } }
+    private boolean enabled() { return alive() && plugin.getConfigService().CHECK_FOR_UPDATE; }
+    public void checkForUpdates() { if (enabled()) request(null); }
     public void checkForUpdates(Player player) {
-        if(!gSitMain.getConfigService().CHECK_FOR_UPDATE) return;
-        if(!gSitMain.getPermissionService().hasPermission(player, "Update")) return;
-        checkVersion(() -> {
-            if(isLatestVersion) return;
-            sendUpdateMessage(player);
-        });
-    }
-
-    private void sendUpdateMessage(CommandSender target) {
-        String website = gSitMain.getDescription().getWebsite();
-        Object path = target instanceof Player && gSitMain.getMessageService() instanceof PaperMessageService ? new MessageService.RawReplacement("<click:open_url:'" + website + "'>" + website + "</click>") : website;
-        gSitMain.getMessageService().sendMessage(target, "Plugin.plugin-update", "%Name%", GSitMain.NAME, "%NewVersion%", latestVersion, "%Version%", gSitMain.getDescription().getVersion(), "%Path%", path);
-    }
-
-    private void getGitHubVersion(Consumer<String> versionConsumer) {
-        gSitMain.getTaskService().run(() -> {
-            try(InputStream inputStream = new URL(GITHUB_REMOTE_URL).openStream(); BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-                StringBuilder response = new StringBuilder();
-                String line;
-                while((line = reader.readLine()) != null) response.append(line);
-                String json = response.toString();
-                String tag = extractJsonValue(json, "tag_name");
-                if(tag != null && versionConsumer != null) versionConsumer.accept(tag);
-            } catch(Throwable e) {
-                if(e.getMessage().contains("50")) return;
-                gSitMain.getLogger().log(Level.WARNING, "Could not get github remote version!", e);
-            }
-        }, false);
-    }
-
-    private void getModrinthVersion(Consumer<String> versionConsumer) {
-        gSitMain.getTaskService().run(() -> {
-            try {
-                URLConnection connection = new URL(MODRINTH_REMOTE_URL).openConnection();
-                connection.setRequestProperty("User-Agent", GSitMain.NAME + "/" + gSitMain.getDescription().getVersion());
-                try(InputStream inputStream = connection.getInputStream(); BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while((line = reader.readLine()) != null) response.append(line);
-                    String json = response.toString();
-                    String firstObject = extractFirstJsonObject(json);
-                    if(firstObject == null) return;
-                    String tag = extractJsonValue(firstObject, "version_number");
-                    if(tag != null && versionConsumer != null) versionConsumer.accept(tag);
-                }
-            } catch(Throwable e) {
-                if(e.getMessage().contains("50")) return;
-                gSitMain.getLogger().log(Level.WARNING, "Could not get modrinth remote version!", e);
-            }
-        }, false);
-    }
-
-    private void getSpigotVersion(Consumer<String> versionConsumer) {
-        gSitMain.getTaskService().run(() -> {
-            try(InputStream inputStream = new URL(SPIGOT_REMOTE_URL).openStream(); Scanner scanner = new Scanner(inputStream)) {
-                if(scanner.hasNext() && versionConsumer != null) versionConsumer.accept(scanner.next());
-            } catch(Throwable e) {
-                if(e.getMessage().contains("50")) return;
-                gSitMain.getLogger().log(Level.WARNING, "Could not get spigot remote version!", e);
-            }
-        }, false);
-    }
-
-    private void getPaperVersion(Consumer<String> versionConsumer) {
-        gSitMain.getTaskService().run(() -> {
-            try(InputStream inputStream = new URL(PAPER_REMOTE_URL).openStream(); Scanner scanner = new Scanner(inputStream)) {
-                if(scanner.hasNext() && versionConsumer != null) versionConsumer.accept(scanner.next());
-            } catch(Throwable e) {
-                if(e.getMessage().contains("50")) return;
-                gSitMain.getLogger().log(Level.WARNING, "Could not get paper remote version!", e);
-            }
-        }, false);
-    }
-
-    private String extractJsonValue(String json, String key) {
-        String search = "\"" + key + "\":\"";
-        int start = json.indexOf(search);
-        if(start == -1) return null;
-        start += search.length();
-        int end = json.indexOf("\"", start);
-        if(end == -1) return null;
-        return json.substring(start, end);
-    }
-
-    private String extractFirstJsonObject(String jsonArray) {
-        int start = jsonArray.indexOf("{");
-        int end = jsonArray.indexOf("}");
-        if(start == -1 || end == -1 || end <= start) return null;
-        return jsonArray.substring(start, end + 1);
-    }
-
-    private void checkVersion(Runnable runnable) {
-        LocalDate today = LocalDate.now();
-        if(lastCheckDate != null && lastCheckDate.equals(today)) {
-            runnable.run();
+        if (!enabled()) return;
+        // onLoad constructs this service before GSit finishes its one-time server detection.
+        // Read GSit's cached flag here; capturing it in the constructor would freeze false.
+        if (!(plugin.isFoliaServer() ? Bukkit.isOwnedByCurrentRegion(player) : Bukkit.isPrimaryThread())) {
+            try { plugin.getTaskService().runDelayed(()->checkForUpdates(player),player,1); }
+            catch (IllegalPluginAccessException | RejectedExecutionException stopped) { /* Server is stopping. */ }
             return;
         }
-        lastCheckDate = today;
+        if (player.isOnline() && plugin.getPermissionService().hasPermission(player,"Update")) request(player.getUniqueId());
+    }
+    private void request(UUID player) {
+        Result ready=null; boolean start=false;
+        synchronized(state) {
+            if (closed) return;
+            long now=clock.getAsLong();
+            if (attempted && !checking && now-nextCheck<0) ready=cached;
+            else {
+                if (player==null) broadcast=true;
+                else if (waiters.size()<MAX_WAITERS) waiters.add(player);
+                if (!checking) { checking=true; start=true; }
+            }
+        }
+        if (ready!=null) notifyResult(ready,player==null,player==null ? Set.of() : Set.of(player));
+        if (!start) return;
+        try { plugin.getTaskService().run(this::fetch,false); }
+        catch (RuntimeException rejected) { finish(null,"检查无法排队"); }
+    }
+    private void fetch() {
+        if (!enabled()) { finish(null,null); return; }
+        Result result=null; String failure=null;
         try {
-            switch(gSitMain.getSource()) {
-                case "github":
-                    getGitHubVersion((version) -> setLatestVersion(version, runnable));
-                    break;
-                case "modrinth":
-                    getModrinthVersion((version) -> setLatestVersion(version, runnable));
-                    break;
-                case "spigot":
-                    getSpigotVersion((version) -> setLatestVersion(version, runnable));
-                    break;
-                case "paper":
-                    getPaperVersion((version) -> setLatestVersion(version, runnable));
-                    break;
-            }
-        } catch(Throwable e) {
-            gSitMain.getLogger().log(Level.WARNING, "Could not check version!", e);
-            isLatestVersion = true;
-        }
+            String version=fetcher.fetch(source,current,options);
+            if (version==null || !VERSION.matcher(version).matches()) throw new UpdateHttp.Failure("版本信息无效");
+            result=new Result(version,compare(version,current)>0);
+        } catch (SocketTimeoutException timeout) { failure="请求超时"; }
+        catch (UpdateHttp.Failure expected) { failure=expected.getMessage(); }
+        catch (Exception error) { failure="网络或版本信息异常"; }
+        finish(result,failure);
     }
-
-    private void setLatestVersion(String version, Runnable runnable) {
-        latestVersion = version;
-        if(latestVersion == null) {
-            isLatestVersion = true;
-            return;
+    private void finish(Result result,String failure) {
+        Set<UUID> recipients; boolean all;
+        synchronized(state) {
+            checking=false;
+            if (closed) { waiters.clear();broadcast=false; return; }
+            cached=result; attempted=true;
+            nextCheck=clock.getAsLong()+(result==null ? options.failureSeconds() : options.successSeconds())*1_000_000_000L;
+            recipients=Set.copyOf(waiters); all=broadcast; waiters.clear(); broadcast=false;
         }
-        String localVersion = gSitMain.getDescription().getVersion();
-        String[] localVersionParts = localVersion.split("\\.");
-        String[] remoteVersionParts = latestVersion.split("\\.");
-        int minLength = Math.min(localVersionParts.length, remoteVersionParts.length);
-        for(int i = 0; i < minLength; i++) {
-            int localPart = Integer.parseInt(localVersionParts[i]);
-            int remotePart = Integer.parseInt(remoteVersionParts[i]);
-            if(localPart < remotePart) {
-                isLatestVersion = false;
-                runnable.run();
-                return;
-            } else if(localPart > remotePart) {
-                isLatestVersion = true;
-                return;
-            }
-        }
-        isLatestVersion = localVersionParts.length >= remoteVersionParts.length;
-        runnable.run();
+        if (!enabled()) return;
+        if (failure!=null && options.logFailure() && !options.failureMessage().isBlank())
+            plugin.getLogger().warning(options.failureMessage().replace("{source}",sourceName()).replace("{reason}",failure));
+        if (result!=null) notifyResult(result,all,recipients);
     }
-
+    private String sourceName() { return switch(source) {case "github"->"GitHub";case "modrinth"->"Modrinth";case "spigot"->"Spigot";case "paper"->"Hangar";default->"未知来源";}; }
+    private void notifyResult(Result result,boolean all,Set<UUID> recipients) {
+        if (!result.newer || !enabled()) return;
+        // TaskService routes this callback to the global scheduler, never to the HTTP worker.
+        try { plugin.getTaskService().run(()->{
+            if (!enabled()) return;
+            if (all) {
+                plugin.getMessageService().sendMessage(Bukkit.getConsoleSender(),"Plugin.plugin-update",arguments(result,Bukkit.getConsoleSender()));
+                for (Player player : List.copyOf(Bukkit.getOnlinePlayers())) queuePlayer(player,result);
+            } else for (UUID id : recipients) {
+                Player player=Bukkit.getPlayer(id);
+                if (player!=null) queuePlayer(player,result);
+            }
+        },true); }
+        catch (IllegalPluginAccessException | RejectedExecutionException stopped) { /* Server is stopping. */ }
+    }
+    private void queuePlayer(Player player,Result result) {
+        if (!enabled()) return;
+        try { plugin.getTaskService().runDelayed(()->{
+            if (enabled() && player.isOnline() && plugin.getPermissionService().hasPermission(player,"Update"))
+                plugin.getMessageService().sendMessage(player,"Plugin.plugin-update",arguments(result,player));
+        },player,1); }
+        catch (IllegalPluginAccessException | RejectedExecutionException stopped) { /* Server is stopping. */ }
+    }
+    private Object[] arguments(Result result,CommandSender target) {
+        Object path=target instanceof Player && plugin.getMessageService() instanceof PaperMessageService
+                ? new MessageService.RawReplacement("<click:open_url:'"+website+"'>"+website+"</click>") : website;
+        return new Object[]{"%Name%","GSit","%NewVersion%",result.version,"%Version%",current,"%Path%",path};
+    }
+    static int compare(String left,String right) throws UpdateHttp.Failure {
+        var a=VERSION.matcher(left);var b=VERSION.matcher(right);
+        if (!a.matches() || !b.matches()) throw new UpdateHttp.Failure("版本信息无效");
+        String[] x=a.group(1).split("\\.");String[] y=b.group(1).split("\\.");
+        for (int i=0;i<Math.max(x.length,y.length);i++) {
+            int order=Integer.compare(i<x.length ? Integer.parseInt(x[i]) : 0,i<y.length ? Integer.parseInt(y[i]) : 0);
+            if (order!=0) return order;
+        }
+        return 0;
+    }
+    @Override public void close() {
+        // Never wait on a socket from a region/shutdown thread. The bounded IO worker closes it in finally.
+        synchronized(state) { closed=true;waiters.clear();broadcast=false;cached=null; }
+    }
 }

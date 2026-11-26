@@ -32,6 +32,10 @@ import java.util.logging.Level;
 
 public class EntityUtil implements dev.geco.gsit.util.EntityUtil {
 
+    @Override public cn.jiujiu.gsit.carry.CarryInput createCarryInput(@NotNull Player player) {
+        return new dev.geco.gsit.mcv.v26_3.model.CarryInputTarget(player);
+    }
+
     private final GSitMain gSitMain;
     private Field entityManager = null;
 

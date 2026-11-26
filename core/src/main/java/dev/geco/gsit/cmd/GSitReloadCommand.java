@@ -29,6 +29,7 @@ public class GSitReloadCommand implements CommandExecutor {
             return true;
         }
 
+        if(cn.jiujiu.gsit.carry.CarryModule.blockUnsafeReload(gSitMain, sender)) return true;
         gSitMain.reload(sender);
 
         gSitMain.getMessageService().sendMessage(sender, "Plugin.plugin-reload");
